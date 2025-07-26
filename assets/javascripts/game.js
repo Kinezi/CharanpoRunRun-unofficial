@@ -409,5 +409,5 @@ function doJump() {
 }
 
 window.addEventListener('keydown', e => { if (!gameOver && (e.code === 'Space' || e.code === 'ArrowUp')) doJump(); });
-canvas.addEventListener('click', () => { if (!gameOver) doJump(); });
+canvas.addEventListener('mousedown', () => { if (!gameOver) doJump(); });
 canvas.addEventListener('touchstart', e => { e.preventDefault(); if (!gameOver) doJump(); }, { passive: false });
