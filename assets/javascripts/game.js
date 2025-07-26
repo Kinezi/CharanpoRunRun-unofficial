@@ -22,6 +22,7 @@ let score = 0;
 let jumpCount = 0;
 let gameStarted = false;
 let gameOver = false;
+let bgmRetry = 0;
 
 const BASE_PLAYER_WIDTH = 80;
 const PLAYER_WIDTH = BASE_PLAYER_WIDTH * mobileScale;
@@ -107,12 +108,23 @@ function startGame() {
   obstacles = []; items = []; tents = []; balloons = []; jumpCount = 0;
   GRAVITY = normalGravity;
   balloonEffectActive = false;
-  bgm.currentTime = 0; bgm.play().catch(() => { });
+  tryPlayBGM()
   setInterval(spawnTent, 7000);
   setInterval(spawnBalloon, 6500);
   lastObstacleTime = performance.now();
   lastItemTime = performance.now();
   requestAnimationFrame(gameLoop);
+}
+
+function tryPlayBGM() {
+  if (!bgm || bgmRetry > 3) return;
+  if (bgm.readyState == 4) {
+    bgm.currentTime = 0;
+    bgm.play().catch(err => console.warn('BGM 再生失敗:', err));
+  } else {
+    bgmRetry++;
+    setTimeout(tryPlayBGM, 200);  // ロードが未完了なので少し待ってから再試行
+  }
 }
 
 function getSpawnMultiplier(score) {
