@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!-- saved from url=(0044)https://hilarious-sundae-46b061.netlify.app/ -->
+<html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Charanpo Run! Run!</title>
+
+  <!-- ✅ Google Fonts (Orbitron) -->
+  <link href="./assets/css/css2" rel="stylesheet">
+
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      background: #87CEFA;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      width: 100vw; height: 100vh;
+    }
+    #gameWrapper {
+      position: relative;
+      width: 100vw; height: 100vh;
+    }
+    @media (max-width: 600px) {
+      html, body {
+        align-items: flex-start;
+      }
+      #gameWrapper {
+        width: 90vw;
+        height: 90vw;
+        margin-top: 5vh;
+      }
+      /* ✅ モバイル時スコアフォントを小さく */
+      #score {
+        font-size: 2rem;
+        top: 10px; left: 15px;
+      }
+    }
+    canvas {
+      display: block;
+      background: #87CEFA;
+      width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+    }
+    #startOverlay {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      cursor: pointer; user-select: none;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column;
+      z-index: 10;
+    }
+    #startOverlay img {
+      width: 200px;
+      image-rendering: pixelated;
+    }
+    /* ✅ スコア表示 左上・白・点滅用クラス */
+    #score {
+      position: absolute;
+      top: 20px; left: 30px;
+      color: #ffffff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3rem;
+    }
+    .blink {
+      animation: blink 0.5s ease-in-out;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrapper">
+    <div id="score">0</div>
+    <canvas id="gameCanvas" width="1536" height="703"></canvas>
+    <div id="startOverlay">
+      <img id="startImage" src="./assets/images/start1.png" alt="Start">
+    </div>
+    <audio id="bgm" src="assets/audio/8bitcharanpo.mp3" loop="" preload="auto"></audio>
+  </div>
+  <script src="./assets/javascripts/game.js"></script>
