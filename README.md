@@ -29,5 +29,5 @@ https://lucky-puppy-d0f264.netlify.app/
 - [ ] Webフォントの読み込み失敗の修正
 
 ## 本家さま
-チャラン・ポ・ランタン Official Web Site https://charanporantan.net/
-Charanpo Run! Run! https://hilarious-sundae-46b061.netlify.app/
+チャラン・ポ・ランタン Official Web Site https://charanporantan.net/  
+Charanpo Run! Run! https://hilarious-sundae-46b061.netlify.app/  
