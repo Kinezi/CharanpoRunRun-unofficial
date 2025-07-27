@@ -17,12 +17,16 @@ const gameOverSound = new Audio('assets/audio/gameover.mp3');
 const pointSound = new Audio('assets/audio/point.mp3');
 pointSound.preload = 'auto';
 const scoreEl = document.getElementById('score');
+const pauseButton = document.getElementById('pauseButton');
+const pauseImage = document.getElementById('pauseImage');
 
 let score = 0;
 let jumpCount = 0;
 let gameStarted = false;
 let gameOver = false;
 let bgmRetry = 0;
+let paused = false;
+let pauseStartTime = 0;
 
 const BASE_PLAYER_WIDTH = 80;
 const PLAYER_WIDTH = BASE_PLAYER_WIDTH * mobileScale;
@@ -36,7 +40,7 @@ const GROUND_HEIGHT = 10;
 const GROUND_OFFSET = 20;
 
 const player = { x: 50, y: 0, width: 0, height: 0, vy: 0 };
-let obstacles = [], items = [], tents = [], balloons = [];
+let butas = [], accs = [], tents = [], balloons = [];
 
 const normalGravity = isMobilePortrait ? 0.8 : 0.5;
 let GRAVITY = normalGravity;
@@ -44,11 +48,16 @@ let GRAVITY = normalGravity;
 let gravityTimer = null;
 let balloonEffectActive = false;
 let balloonEffectEndTime = 0; // ✅ 効果終了予定時刻を管理
+let pausedBalloonEffectEndTime = 0; // ポーズ前の効果終了予定時刻
 
-let lastObstacleTime = 0;
-let lastItemTime = 0;
-const baseInterval = 1900;
-const baseItemInterval = 2600;
+let lastButaTime = 0;
+let lastAccTime = 0;
+let lastTentTime = 0;
+let lastBalloonTime = 0;
+const BASE_INTERVAL = 1900;
+const BASE_ACC_INTERVAL = 2600;
+const BASE_TENT_INTERVAL = 7000;
+const BASE_BALLOON_INTERVAL = 6500;
 
 const imageKeys = [
   'momo', 'momomo', 'buta', 'acc', 'tento',
@@ -106,14 +115,11 @@ function startGame() {
   gameOver = false;
   score = 0;
   scoreEl.textContent = '0';
-  obstacles = []; items = []; tents = []; balloons = []; jumpCount = 0;
+  butas = []; accs = []; tents = []; balloons = []; jumpCount = 0;
   GRAVITY = normalGravity;
   balloonEffectActive = false;
-  tryPlayBGM()
-  setInterval(spawnTent, 7000);
-  setInterval(spawnBalloon, 6500);
-  lastObstacleTime = performance.now();
-  lastItemTime = performance.now();
+  lastButaTime = performance.now();
+  lastAccTime = lastTentTime = lastBalloonTime = performance.now();
   requestAnimationFrame(gameLoop);
 }
 
@@ -136,24 +142,24 @@ function getSpawnMultiplier(score) {
   return Math.min(1 + increase, 1.6);
 }
 
-function getItemInterval(score) {
+function getAccInterval(score) {
   if (score >= 15 && score <= 30) {
-    return baseItemInterval / 3; // 300%
+    return BASE_ACC_INTERVAL / 3; // 300%
   }
-  return baseItemInterval;
+  return BASE_ACC_INTERVAL;
 }
 
-function spawnObstacle() {
+function spawnButa() {
   const x = canvas.width + Math.random() * 200;
   const safe = PLAYER_WIDTH + 50;
-  if ([...obstacles, ...items, ...tents, ...balloons].some(o => Math.abs(o.x - x) < safe)) return;
+  if ([...butas, ...accs, ...tents, ...balloons].some(o => Math.abs(o.x - x) < safe)) return;
 
   const wStandard = 60 * mobileScale;
   const hStandard = wStandard * images['buta'].naturalHeight / images['buta'].naturalWidth;
 
   if (score >= 55 && Math.random() < 0.15) {
     const y = canvas.height - GROUND_HEIGHT - GROUND_OFFSET - hStandard;
-    obstacles.push({ x, y, width: wStandard, height: hStandard, type: 'buta', speed: BASE_SPEED * 0.5 });
+    butas.push({ x, y, width: wStandard, height: hStandard, type: 'buta', speed: BASE_SPEED * 0.5 });
     return;
   }
 
@@ -174,7 +180,7 @@ function spawnObstacle() {
       speed = BASE_SPEED;
     }
 
-    obstacles.push({ x, y, width: w, height: h, type: 'buta', speed });
+    butas.push({ x, y, width: w, height: h, type: 'buta', speed });
     return;
   }
 
@@ -203,26 +209,26 @@ function spawnObstacle() {
   }
 
   const selected = candidates[selectedIndex];
-  obstacles.push({ x, y: selected.y, width: wStandard, height: hStandard, type: 'buta', speed: selected.speed });
+  butas.push({ x, y: selected.y, width: wStandard, height: hStandard, type: 'buta', speed: selected.speed });
 }
 
-function spawnItem() {
+function spawnAcc() {
   const x = canvas.width + Math.random() * 200;
   const safe = PLAYER_WIDTH + 50;
-  if ([...obstacles, ...items, ...tents, ...balloons].some(o => Math.abs(o.x - x) < safe)) return;
+  if ([...butas, ...accs, ...tents, ...balloons].some(o => Math.abs(o.x - x) < safe)) return;
 
   const w = 60 * mobileScale;
   const h = w * images['acc'].naturalHeight / images['acc'].naturalWidth;
   const groundY = canvas.height - GROUND_HEIGHT - GROUND_OFFSET - h;
   const y = (score >= 10 && Math.random() < 0.5) ? 200 + Math.random() * (groundY - 200) : groundY;
 
-  items.push({ x, y, width: w, height: h, type: 'acc' });
+  accs.push({ x, y, width: w, height: h, type: 'acc' });
 }
 
 function spawnTent() {
   const x = canvas.width + Math.random() * 400;
   const safe = PLAYER_WIDTH + 50;
-  if ([...obstacles, ...items, ...tents, ...balloons].some(o => Math.abs(o.x - x) < safe)) return;
+  if ([...butas, ...accs, ...tents, ...balloons].some(o => Math.abs(o.x - x) < safe)) return;
 
   const w = 100 * mobileScale;
   const h = w * images['tento'].naturalHeight / images['tento'].naturalWidth;
@@ -234,7 +240,7 @@ function spawnBalloon() {
   if (score < 30) return;
   const x = canvas.width + Math.random() * 400;
   const safe = PLAYER_WIDTH + 50;
-  if ([...obstacles, ...items, ...tents, ...balloons].some(o => Math.abs(o.x - x) < safe)) return;
+  if ([...butas, ...accs, ...tents, ...balloons].some(o => Math.abs(o.x - x) < safe)) return;
 
   const w = 60 * mobileScale;
   const h = w * images['huusen'].naturalHeight / images['huusen'].naturalWidth;
@@ -254,12 +260,12 @@ function update() {
     jumpCount = 0;
   }
 
-  obstacles.forEach(o => o.x -= o.speed);
-  items.forEach(i => i.x -= BASE_SPEED);
+  butas.forEach(o => o.x -= o.speed);
+  accs.forEach(i => i.x -= BASE_SPEED);
   tents.forEach(t => t.x -= BASE_SPEED);
   balloons.forEach(b => b.x -= BASE_SPEED);
 
-  obstacles.forEach(o => {
+  butas.forEach(o => {
     if (!gameOver && isCollision(player, o)) {
       gameOver = true;
       bgm.pause();
@@ -273,15 +279,15 @@ function update() {
     setTimeout(() => scoreEl.classList.remove('blink'), 500);
   };
 
-  for (let i = items.length - 1; i >= 0; i--) {
-    if (isCollision(player, items[i])) {
+  for (let i = accs.length - 1; i >= 0; i--) {
+    if (isCollision(player, accs[i])) {
       player.width *= 1.2;
       player.height *= 1.2;
       playPointSound();
       score++;
       scoreEl.textContent = score;
       blinkEffect();
-      items.splice(i, 1);
+      accs.splice(i, 1);
     }
   }
 
@@ -308,18 +314,16 @@ function update() {
       GRAVITY = isMobilePortrait ? 0.4 : 0.25;
       balloonEffectActive = true;
       balloonEffectEndTime = performance.now() + 5000; // ✅ 効果終了予定時刻を記録
+    }
 
-      if (gravityTimer) clearTimeout(gravityTimer);
-      gravityTimer = setTimeout(() => {
-        GRAVITY = normalGravity;
-        balloonEffectActive = false;
-        gravityTimer = null;
-      }, 5000);
+    if (balloonEffectActive && performance.now() > balloonEffectEndTime) {
+      GRAVITY = normalGravity;
+      balloonEffectActive = false;
     }
   }
 
-  obstacles = obstacles.filter(o => o.x + o.width > 0);
-  items = items.filter(i => i.x + i.width > 0);
+  butas = butas.filter(o => o.x + o.width > 0);
+  accs = accs.filter(i => i.x + i.width > 0);
   tents = tents.filter(t => t.x + t.width > 0);
   balloons = balloons.filter(b => b.x + b.width > 0);
 }
@@ -331,8 +335,8 @@ function draw() {
   ctx.fillStyle = '#222';
   ctx.fillRect(0, canvas.height - GROUND_HEIGHT - GROUND_OFFSET, canvas.width, GROUND_HEIGHT);
 
-  obstacles.forEach(o => ctx.drawImage(images[o.type], o.x, o.y, o.width, o.height));
-  items.forEach(i => ctx.drawImage(images[i.type], i.x, i.y, i.width, i.height));
+  butas.forEach(o => ctx.drawImage(images[o.type], o.x, o.y, o.width, o.height));
+  accs.forEach(i => ctx.drawImage(images[i.type], i.x, i.y, i.width, i.height));
   tents.forEach(t => ctx.drawImage(images[t.type], t.x, t.y, t.width, t.height));
   balloons.forEach(b => ctx.drawImage(images[b.type], b.x, b.y, b.width, b.height));
 
@@ -362,6 +366,15 @@ function draw() {
     }
   }
 
+  if (paused) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('一時停止中', canvas.width / 2, canvas.height / 2);
+  }
+
   if (gameOver) {
     let img;
     if (score < 20) img = images['gameover'];
@@ -386,21 +399,42 @@ function draw() {
 }
 
 function gameLoop(timestamp) {
+  if (paused) {
+    draw();
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
   update();
   draw();
 
-  const elapsedObs = timestamp - lastObstacleTime;
-  const currentIntervalObs = baseInterval / getSpawnMultiplier(score);
+  const elapsedObs = timestamp - lastButaTime;
+  const currentIntervalObs = BASE_INTERVAL / getSpawnMultiplier(score);
   if (elapsedObs >= currentIntervalObs) {
-    spawnObstacle();
-    lastObstacleTime = timestamp;
+    spawnButa();
+    lastButaTime = timestamp;
   }
 
-  const elapsedItem = timestamp - lastItemTime;
-  const currentItemInterval = getItemInterval(score);
-  if (elapsedItem >= currentItemInterval) {
-    spawnItem();
-    lastItemTime = timestamp;
+  const elapsedAcc = timestamp - lastAccTime;
+  const currentAccInterval = getAccInterval(score);
+  if (elapsedAcc >= currentAccInterval) {
+    spawnAcc();
+    console.debug('acc spawn');
+    lastAccTime = timestamp;
+  }
+
+  const elapsedTent = timestamp - lastTentTime;
+  if (elapsedTent >= BASE_TENT_INTERVAL) {
+    spawnTent();
+    console.debug('tent spawn');
+    lastTentTime = timestamp;
+  }
+
+  const elapsedBalloon = timestamp - lastBalloonTime;
+  if (elapsedBalloon >= BASE_BALLOON_INTERVAL) {
+    spawnBalloon();
+    console.debug('balloon spawn');
+    lastBalloonTime = timestamp;
   }
 
   if (!gameOver) requestAnimationFrame(gameLoop);
@@ -421,9 +455,39 @@ function doJump() {
   }
 }
 
-window.addEventListener('keydown', e => { 
-  if (!gameOver && (e.code === 'Space' || e.code === 'ArrowUp')) doJump();
-  else if (gameOver) location.reload();
+function togglePause() {
+  const now = performance.now();
+  paused = !paused;
+
+  if (paused) { 
+    pauseStartTime = now;
+    if (balloonEffectActive) {
+      // 風船の有効時間を無限にする
+      pausedBalloonEffectEndTime = balloonEffectEndTime;
+      balloonEffectEndTime = Number.MAX_SAFE_INTEGER;
+    }
+    pauseImage.src = "./assets/images/resume.png"
+  } else {
+    const pauseDuration = now - pauseStartTime;
+    lastAccTime += pauseDuration;
+    lastTentTime += pauseDuration;
+    lastBalloonTime += pauseDuration;
+    lastButaTime += pauseDuration;
+    if (balloonEffectActive) balloonEffectEndTime = pausedBalloonEffectEndTime + pauseDuration;
+    pauseImage.src = "./assets/images/pause.png"
+  }
+}
+
+window.addEventListener('keydown', e => {
+  if (gameOver) {
+    location.reload();
+  } else if (e.code === 'Space' || e.code === 'ArrowUp') {
+    doJump();
+  } else if (e.code === 'Escape' || e.code === 'KeyP') {
+    togglePause()
+  }
 });
 canvas.addEventListener('mousedown', () => { gameOver ? location.reload() : doJump(); });
 canvas.addEventListener('touchstart', e => { e.preventDefault(); gameOver ? location.reload() : doJump(); }, { passive: false });
+pauseButton.addEventListener('mousedown', () => { if (!gameOver) togglePause() });
+pauseButton.addEventListener('touchStart', e => { e.preventDefault(); if (!gameOver) togglePause() }, { passive: false });
