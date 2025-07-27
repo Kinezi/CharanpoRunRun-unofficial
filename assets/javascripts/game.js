@@ -77,8 +77,9 @@ function initGame() {
   player.y = canvas.height - GROUND_HEIGHT - GROUND_OFFSET - player.height;
 
   draw();
-  overlay.addEventListener('click', startGame);
+  overlay.addEventListener('mousedown', startGame);
   overlay.addEventListener('touchstart', e => { e.preventDefault(); startGame(); }, { passive: false });
+  document.addEventListener('keydown', startGame, { once: true });
 
   // ✅ スタート画面画像を交互に切り替え
   const startImage = document.getElementById('startImage');
@@ -420,6 +421,9 @@ function doJump() {
   }
 }
 
-window.addEventListener('keydown', e => { if (!gameOver && (e.code === 'Space' || e.code === 'ArrowUp')) doJump(); });
-canvas.addEventListener('mousedown', () => { if (!gameOver) doJump(); });
-canvas.addEventListener('touchstart', e => { e.preventDefault(); if (!gameOver) doJump(); }, { passive: false });
+window.addEventListener('keydown', e => { 
+  if (!gameOver && (e.code === 'Space' || e.code === 'ArrowUp')) doJump();
+  else if (gameOver) location.reload();
+});
+canvas.addEventListener('mousedown', () => { gameOver ? location.reload() : doJump(); });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); gameOver ? location.reload() : doJump(); }, { passive: false });
