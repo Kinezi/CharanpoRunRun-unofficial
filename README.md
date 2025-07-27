@@ -26,7 +26,7 @@ https://lucky-puppy-d0f264.netlify.app/
 - [ ] (見つけ次第追記)
 
 既知の不具合（この開発環境のみ）
-- [ ] Webフォントの読み込み失敗の修正
+- [x] Webフォントの読み込み失敗の修正
 
 ## 本家さま
 チャラン・ポ・ランタン Official Web Site https://charanporantan.net/  
