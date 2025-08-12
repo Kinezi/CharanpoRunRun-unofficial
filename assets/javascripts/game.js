@@ -118,6 +118,7 @@ function startGame() {
   butas = []; accs = []; tents = []; balloons = []; jumpCount = 0;
   GRAVITY = normalGravity;
   balloonEffectActive = false;
+  tryPlayBGM();
   lastButaTime = performance.now();
   lastAccTime = lastTentTime = lastBalloonTime = performance.now();
   requestAnimationFrame(gameLoop);
